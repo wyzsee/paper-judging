@@ -77,6 +77,11 @@ export default function AdminPage() {
     fetchData();
   }, [router]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   if (loading)
     return (
       <div className="p-8 text-center font-bold">
@@ -91,10 +96,10 @@ export default function AdminPage() {
             🏆 Leaderboard Penilaian
           </h1>
           <button
-            onClick={() => router.push("/")}
-            className="text-blue-600 hover:underline"
+            onClick={handleLogout}
+            className="text-sm text-red-600 hover:text-red-800 font-medium"
           >
-            Kembali ke Dashboard
+            Logout
           </button>
         </div>
 
