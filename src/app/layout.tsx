@@ -10,7 +10,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Sistem Penjurian",
+  title: "Paper Judging",
   description: "Aplikasi Penjurian Makalah Online",
 };
 
