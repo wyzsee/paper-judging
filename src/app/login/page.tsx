@@ -2,7 +2,13 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { Eye, EyeSlash, LockKey, Envelope } from "@phosphor-icons/react";
+import {
+  Eye,
+  EyeSlash,
+  LockKey,
+  Envelope,
+  Notebook,
+} from "@phosphor-icons/react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,7 +54,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
+      <div className="bg-white flex justify-center items-center rounded-3xl shadow-lg h-24 w-24 mb-5">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-tr from-sky-500 to-indigo-500 blur-md opacity-70" />
+          <Notebook size={64} weight="fill" className="relative text-sky-100" />
+        </div>
+      </div>
       <div className="max-w-md w-full bg-white rounded-4xl shadow-md p-8">
         <h2 className="text-2xl font-semibold text-center text-gray-700 mb-2">
           Welcome! 👋
@@ -65,13 +77,15 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-600">Email</label>
+            <label className="block text-sm font-medium text-gray-600">
+              Email
+            </label>
             <div className="relative mt-4">
               {/* Icon Amplop di Kiri */}
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Envelope size={20} className="text-gray-400" />
               </div>
-              
+
               <input
                 type="email"
                 required
