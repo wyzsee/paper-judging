@@ -76,7 +76,7 @@ export default function LoginPage() {
                 type="email"
                 required
                 placeholder="email@example.com"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 text-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -95,7 +95,7 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 required
                 placeholder="********"
-                className="mt-1 block pl-10 w-full px-3 py-2 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block pl-10 w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
