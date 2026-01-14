@@ -9,7 +9,7 @@ export default function PodiumPage() {
   const [loading, setLoading] = useState(true);
   const [winners, setWinners] = useState<any[]>([]);
 
-  // Fungsi untuk mengambil data (dipisah biar bisa dipanggil ulang)
+  // Fungsi fetch data
   const fetchData = async () => {
     const { data: participants } = await supabase.from("participants")
       .select(`
@@ -43,27 +43,25 @@ export default function PodiumPage() {
         .from("profiles").select("role").eq("id", session.user.id).single();
       if (profile?.role !== "admin") { router.push("/"); return; }
 
-      // 2. Ambil Data Awal
+      // 2. Ambil Data
       await fetchData();
     };
 
     checkUser();
 
-    // 3. === SETUP REALTIME SUBSCRIPTION ===
-    // Ini adalah "Telinga" yang mendengarkan perubahan di database
+    // 3. Realtime Subscription
     const channel = supabase
-      .channel('realtime-scores') // Nama channel bebas
+      .channel('realtime-scores')
       .on(
         'postgres_changes', 
-        { event: '*', schema: 'public', table: 'scores' }, // Dengarkan tabel 'scores'
+        { event: '*', schema: 'public', table: 'scores' },
         (payload) => {
-          console.log('Ada nilai baru masuk!', payload);
-          fetchData(); // JIKA ADA PERUBAHAN, AMBIL ULANG DATA OTOMATIS
+          console.log('Update masuk:', payload);
+          fetchData();
         }
       )
       .subscribe();
 
-    // Cleanup: Matikan langganan saat pindah halaman biar ga memori leak
     return () => {
       supabase.removeChannel(channel);
     };
@@ -76,9 +74,9 @@ export default function PodiumPage() {
     </div>
   );
 
-  const champion = winners[0];      // Juara 1
-  const runnerUp = winners[1];      // Juara 2
-  const secondRunnerUp = winners[2]; // Juara 3
+  const champion = winners[0];
+  const runnerUp = winners[1];
+  const secondRunnerUp = winners[2];
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans flex flex-col relative overflow-hidden">
@@ -100,14 +98,15 @@ export default function PodiumPage() {
             <h1 className="text-2xl md:text-4xl font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-600 drop-shadow-sm">
                 Hall of Fame
             </h1>
-            <p className="text-xs text-yellow-500/80 tracking-widest mt-1 uppercase">Top 3 Participants</p>
+            {/* Tambahkan Margin Bottom (mb-2) sedikit */}
+            <p className="text-xs text-yellow-500/80 tracking-widest mt-1 uppercase mb-2">Top 3 Participants</p>
         </div>
         
         <div className="w-24"></div>
       </div>
 
-      {/* AREA PODIUM */}
-      <div className="flex-grow flex items-end justify-center z-10 px-4 pb-0 relative mt-10 md:mt-0">
+      {/* AREA PODIUM - PERBAIKAN DI SINI */}
+      <div className="flex-grow flex items-end justify-center z-10 px-4 pb-0 relative mt-10 md:mt-14">
         
         {/* === JUARA 2 (KIRI) === */}
         <div className="flex flex-col items-center justify-end w-1/3 max-w-[280px] group order-1">
@@ -136,6 +135,7 @@ export default function PodiumPage() {
             {champion ? (
                 <>
                     <div className="mb-6 text-center opacity-0 animate-slide-up relative" style={{animationDelay: '0.5s'}}>
+                        {/* Mahkota */}
                         <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 text-yellow-400 animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.8)]">
                             <Crown size={48} weight="fill" />
                         </div>
