@@ -91,7 +91,7 @@ export default function PodiumPage() {
       <div className="relative z-20 p-6 flex justify-between items-center bg-transparent">
         <button 
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm"
+            className="flex items-center cursor-pointer gap-2 text-gray-400 hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm"
         >
             <ArrowLeft size={20} /> <span className="text-sm font-medium">Kembali</span>
         </button>
