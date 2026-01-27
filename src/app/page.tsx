@@ -1,267 +1,217 @@
-"use client";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
-import { CaretRight } from "@phosphor-icons/react";
-import {
-  SignOut,
-  Users,
-  CheckCircle,
-  Clock,
-  PencilSimple,
-} from "@phosphor-icons/react";
+'use client';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
+import { SignOut, CheckCircle, Star, User, PresentationChart } from "@phosphor-icons/react";
 
 export default function Dashboard() {
   const router = useRouter();
   const [participants, setParticipants] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  // State untuk menyimpan ID peserta yang SUDAH dinilai
+  const [profile, setProfile] = useState<any>(null); // State untuk simpan data profil (Nama Asli)
   const [myScores, setMyScores] = useState<any[]>([]);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const checkUser = async () => {
-      // Check Login Session
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", handleScroll);
 
-      if (!session) {
-        router.push("/login");
-      } else {
-        setUser(session.user);
-        fetchData(session.user.id);
-      }
-    };
+    const fetchData = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if(!session) return router.push('/login');
 
-    const fetchData = async (userId: string) => {
-      try {
-        // Get all participants
-        const { data: dataPeserta, error: errorPeserta } = await supabase
-          .from("participants")
-          .select("*")
-          .order("display_order", { ascending: true });
+        // 1. Ambil Data Profil (Untuk Nama Lengkap & Username)
+        const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+        setProfile(profileData);
 
-        if (errorPeserta) console.error("Error ambil peserta:", errorPeserta);
+        // 2. Ambil Data Peserta
+        const { data: dataPeserta } = await supabase
+          .from('participants').select('*').order('display_order');
         setParticipants(dataPeserta || []);
 
-        //  Ambil Data Nilai
-        const { data: dataNilai, error: errorNilai } = await supabase
-          .from("scores")
-          .select("participant_id, total_score")
-          .eq("judge_id", userId);
-
-        if (errorNilai) console.error("Error ambil nilai:", errorNilai);
-
-        if (dataNilai) {
-          setMyScores(dataNilai);
-        }
-      } catch (err) {
-        console.error("Terjadi kesalahan:", err);
-      } finally {
-        // 4. Pastikan Loading berhenti apapun yang terjadi
-        setLoading(false);
-      }
+        // 3. Ambil Skor Saya
+        const { data: dataNilai } = await supabase
+          .from('scores').select('participant_id, total_score').eq('judge_id', session.user.id);
+        setMyScores(dataNilai || []);
     };
+    fetchData();
 
-    checkUser();
+    return () => window.removeEventListener("scroll", handleScroll);
   }, [router]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push('/login');
   };
 
-  // Stats
-  const totalPeserta = participants.length;
-  const sudahDinilai = myScores.length;
-  const belumDinilai = totalPeserta - sudahDinilai;
-
-  // Helper Initial Participants
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  };
-
-  if (loading)
-    return <div className="p-8 text-center">Memuat data dashboard...</div>;
+  // Helper Display Name
+  // Prioritas: Nama Lengkap -> Username -> Email
+  const displayName = profile?.full_name || "Nama Juri";
+  const displayId = profile?.username || "JURI";
 
   return (
-    <div className="min-h-screen bg-gray-100 pb-8 font-sans">
-      <header className="flex justify-between px-4 py-6 bg-white border-b border-gray-300 shadow-2xs items-center mb-8 max-w-2xl mx-auto">
-        <div className="flex items-center">
-          <div className="flex items-center justify-center shadow-sm w-12 h-12 rounded-full bg-linear-to-br from-sky-500 to-indigo-500 mr-4">
-            <div className="text-2xl font-semibold text-white">J</div>
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-semibold text-gray-800">
-              Hello, {user.email}!
-            </h1>
-            <p className="text-sm text-gray-500">Silahkan lakukan penilaian!</p>
-          </div>
+    <div className="min-h-screen w-full pb-20 font-poppins relative selection:bg-cyan-500 selection:text-black">
+      
+      {/* === BACKGROUND IMAGE FIXED === */}
+      <div 
+        className="fixed inset-0 z-0"
+        style={{ 
+            backgroundImage: `
+              linear-gradient(to bottom, rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.7)),
+              url('/bg-audit.jpeg') 
+            `, 
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+        }}
+      ></div>
+
+      {/* === NAVBAR GLASS === */}
+      <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out px-6 ${
+          isScrolled 
+            ? 'bg-slate-950/80 backdrop-blur-md shadow-lg border-b border-white/10 py-3' 
+            : 'bg-transparent py-6'
+        }`}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+           <div className="flex items-center gap-4">
+              {/* Avatar Inisial */}
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white font-bold text-lg border border-white/10">
+                  {displayName.charAt(0)}
+              </div>
+              
+              {/* Info Nama Juri */}
+              <div className="leading-tight">
+                  <p className="text-[10px] text-cyan-300 uppercase tracking-widest font-bold mb-0.5">
+                    ID: {displayId}
+                  </p>
+                  <p className="text-white font-bold text-base md:text-lg tracking-wide">
+                    {displayName}
+                  </p>
+              </div>
+           </div>
+
+           <button 
+             onClick={handleLogout}
+             className="group cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-full text-blue-400 border border-white/10 bg-white/5 hover:bg-red-500/10 hover:border-red-500/50 hover:text-red-400 transition-all duration-300 backdrop-blur-md"
+           >
+              <span className="text-xs font-semibold hidden md:block uppercase tracking-wider">Log Out</span>
+              <SignOut size={18} weight="bold"/>
+           </button>
         </div>
-        <div></div>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-gray-800 hover:text-red-600 font-semibold cursor-pointer"
-        >
-          <SignOut size={24} />
-        </button>
-      </header>
+      </header> 
 
-      <main className="max-w-2xl mx-auto px-4 space-y-4">
-        <div className="w-full flex justify-evenly items-center">
-          <div className="flex flex-col p-5 justify-between items-start h-32 w-36 bg-white rounded-2xl shadow-md">
-            <div className="flex space-x-2 text-gray-600">
-              <Users size={24} />
-              <p>Total</p>
-            </div>
-            <div className="text-gray-900 font-semibold text-5xl">
-              {totalPeserta}
-            </div>
-          </div>
-          <div className="flex flex-col p-5 justify-between items-start h-32 w-36 bg-green-100 rounded-2xl shadow-md">
-            <div className="flex space-x-2 text-green-600">
-              <CheckCircle size={24} />
-              <p>Selesai</p>
-            </div>
-            <div className="text-green-600 font-semibold text-5xl">
-              {sudahDinilai}
-            </div>
-          </div>
-          <div className="flex flex-col p-5 justify-between items-start h-32 w-36 bg-orange-100 rounded-2xl shadow-md">
-            <div className="flex space-x-2 text-orange-800">
-              <Clock size={24} />
-              <p>Pending</p>
-            </div>
-            <div className="text-orange-800 font-semibold text-5xl">
-              {belumDinilai}
-            </div>
-          </div>
-        </div>
-
-        {/* Participant List */}
-        <div className="space-y-4">
-          <div>
-            <h1 className="font-semibold text-gray-800 text-2xl">
-              Daftar Partisipan
+      {/* === CONTENT === */}
+      <main className="relative z-10 max-w-7xl mx-auto px-6 pt-36">
+        
+        {/* Title Section */}
+        <div className="text-center mb-14">
+            <h1 className="text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-blue-400 drop-shadow-[0_0_25px_rgba(34,211,238,0.2)] mb-4">
+                Penilaian Makalah
             </h1>
-
-            <p className="text-sm text-gray-600">
-              Tap tombol warna biru untuk memberi nilai!
+            <p className="text-slate-300 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
+                Selamat datang di sistem penilaian makalah. Silakan pilih peserta untuk memulai proses evaluasi berdasarkan kriteria yang telah ditetapkan.
             </p>
-          </div>
+        </div>
 
-          {participants.map((item) => {
-            // Cari apakah peserta ini ada di daftar nilai saya?
-            const scoreData = myScores.find(
-              (s) => s.participant_id === item.id
-            );
-            const isDone = !!scoreData; // true jika sudah ada nilai
+        {/* Grid Card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+            {participants.map((item) => {
+            const scoreData = myScores.find(s => s.participant_id === item.id);
+            const isDone = !!scoreData;
 
             return (
-              <div
-                key={item.id}
-                className="group relative bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300"
-              >
-                {/* Edit Score */}
-                {isDone && (
-                  <button
-                    onClick={() => router.push(`/nilai/${item.id}`)}
-                    title="Edit Nilai"
-                    className="absolute top-3 right-3 p-2 text-gray-300 hover:text-blue-600 hover:bg-blue-50 cursor-pointer rounded-full transition-colors"
-                  >
-                    <PencilSimple size={18} weight="bold" />
-                  </button>
-                )}
+                <div 
+                  key={item.id} 
+                  className="group relative bg-slate-900/40 backdrop-blur-md rounded-3xl border border-white/5 hover:border-cyan-500/40 overflow-hidden transition-all duration-500 hover:shadow-[0_0_40px_rgba(6,182,212,0.1)] hover:-translate-y-2 flex flex-col"
+                >
+                  {/* IMAGE SECTION */}
+                  <div className="relative h-52 w-full overflow-hidden">
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                        style={{ backgroundImage: `url('${item.image_url || '/img/default.jpg'}')` }} 
+                      ></div>
+                      
+                      {/* Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
 
-                <div className="flex flex-col items-start gap-4">
-                  <div className="flex gap-4">
-                    {/* 1. AVATAR INISIAL */}
-                    <div
-                      className={`
-                      flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold
-                      ${
-                        isDone
-                          ? "bg-blue-50 text-blue-600"
-                          : "bg-gray-100 text-gray-500"
-                      }
-                    `}
-                    >
-                      {getInitials(item.name)}
-                    </div>
-                    <div className="grow min-w-0 pr-8">
-                      {" "}
-                      {/* pr-8 biar gak nabrak tombol edit */}
-                      <h2 className="text-base font-bold text-gray-800 truncate">
-                        {item.name}
-                      </h2>
-                      <p className="text-xs text-gray-500 truncate mb-2">
-                        {item.title}
-                      </p>
-                    </div>
+                      {/* Status Badge */}
+                      <div className="absolute top-4 right-4 z-10">
+                        {isDone ? (
+                            <span className="flex items-center gap-1.5 bg-emerald-500/20 backdrop-blur-xl border border-emerald-500/30 text-emerald-300 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide shadow-lg">
+                                <CheckCircle size={13} weight="fill" /> Selesai: {scoreData.total_score}
+                            </span>
+                        ) : (
+                            <span className="flex items-center gap-1.5 bg-amber-500/20 backdrop-blur-xl border border-amber-500/30 text-amber-300 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wide shadow-lg animate-pulse">
+                                <Star size={13} weight="fill" /> Menunggu
+                            </span>
+                        )}
+                      </div>
                   </div>
-                  <div className="flex w-full justify-between">
-                    {/* Badge Status */}
-                    <div className="flex items-start">
-                      {isDone ? (
-                        <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-sm px-3 py-1 rounded-full font-normal">
-                          <CheckCircle size={12} weight="fill" /> Selesai
-                          Dinilai
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-orange-50 text-orange-600 text-sm px-3 py-1 rounded-full font-normal">
-                          <Clock size={12} weight="fill" /> Menunggu Penilaian
-                        </span>
-                      )}
-                    </div>
-                    {/* Score */}
-                    <div className="flex-shrink-0 text-right">
-                      {isDone ? (
-                        // JIKA SUDAH: Tampilkan Total Skor
-                        <div className="flex flex-col items-end">
-                          <span className="text-[10px] text-gray-400 uppercase font-semibold">
-                            Total Skor
-                          </span>
-                          <span className="text-2xl font-bold text-gray-800 font-mono">
-                            {scoreData.total_score}
-                          </span>
+
+                  {/* CONTENT SECTION */}
+                  <div className="p-6 flex-1 flex flex-col -mt-12 relative z-10">
+                     {/* Glass Overlay for Content */}
+                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-900/90 pointer-events-none"></div>
+
+                     {/* Content Body */}
+                     <div className="relative">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="bg-cyan-500/20 p-1.5 rounded-lg text-cyan-300 border border-cyan-500/20 backdrop-blur-md">
+                                <PresentationChart size={18} weight="duotone" />
+                            </div>
+                            <span className="text-[10px] uppercase tracking-widest text-cyan-200/80 font-bold bg-cyan-900/30 px-2 py-1 rounded-md">
+                                Peserta #{item.display_order}
+                            </span>
                         </div>
-                      ) : (
-                        // JIKA BELUM: Tampilkan Tombol Nilai
-                        <button
-                          onClick={() => router.push(`/nilai/${item.id}`)}
-                          className="flex items-center gap-1 bg-linear-to-br from-sky-500 to-indigo-500 text-white px-4 py-2 rounded-full cursor-pointer text-sm font-bold shadow-blue-200 shadow-md hover:opacity-90 hover:shadow-lg transition-all active:scale-95"
+
+                        <h3 className="text-xl font-bold text-white leading-snug mb-4 group-hover:text-cyan-300 transition-colors drop-shadow-md min-h-[3.5rem]">
+                            {item.title}
+                        </h3>
+
+                        {/* Detail Info */}
+                        <div className="space-y-3 pt-4 border-t border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 shrink-0 border border-white/5">
+                                    <User size={16} weight="fill" />
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] uppercase text-slate-500 font-bold tracking-wider">Moderator</span>
+                                    <span className="text-sm text-slate-200 font-medium">{item.moderator}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 shrink-0 border border-white/5">
+                                    <User size={16} weight="duotone" />
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] uppercase text-slate-500 font-bold tracking-wider">Presenter</span>
+                                    <span className="text-sm text-slate-200 font-medium line-clamp-1">{item.presenters?.join(', ')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <button 
+                            onClick={() => router.push(`/nilai/${item.id}`)}
+                            className={`
+                                mt-6 w-full py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider transition-all duration-300 shadow-lg
+                                ${isDone 
+                                    ? 'bg-slate-800/50 border border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white hover:border-slate-500' 
+                                    : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white border border-transparent hover:shadow-[0_0_20px_rgba(6,182,212,0.5)] hover:scale-[1.02]'}
+                            `}
                         >
-                          Nilai <CaretRight size={16} weight="bold" />
+                            {isDone ? 'Edit Penilaian' : 'Mulai Penilaian'}
                         </button>
-                      )}
-                    </div>
+                     </div>
                   </div>
                 </div>
-              </div>
             );
-          })}
+            })}
         </div>
       </main>
-    </div>
-  );
-}
-
-// Komponen Kecil untuk Statistik
-function StatCard({ icon, val, label, color }: any) {
-  return (
-    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-      <div className={`p-2 rounded-full mb-1 ${color}`}>{icon}</div>
-      <span className="text-xl font-bold text-gray-800">{val}</span>
-      <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-        {label}
-      </span>
     </div>
   );
 }

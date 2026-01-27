@@ -1,18 +1,14 @@
 "use client";
+
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import {
-  Eye,
-  EyeSlash,
-  LockKey,
-  Envelope,
-  Notebook,
-} from "@phosphor-icons/react";
+import { LockKey, User, Notebook, Eye, EyeSlash } from "@phosphor-icons/react";
+import Swal from "sweetalert2";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -22,16 +18,29 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
+    
+    const fakeEmail = `${username.trim()}@event.com`;
 
     // Login Function
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
+      email: fakeEmail,
       password: password,
     });
 
     if (error) {
-      setErrorMsg("Login Gagal: " + error.message);
       setLoading(false);
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Akses Ditolak',
+        text: 'Username atau Password salah. Silakan coba lagi.',
+        background: '#020617', // Hitam pekat gradient
+        color: '#fff',
+        confirmButtonColor: '#d946ef', // Pink/Red neon untuk error
+        customClass: {
+            popup: 'border border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
+        }
+      });
       return;
     }
 
@@ -54,62 +63,65 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-4">
-      <div className="bg-white flex justify-center items-center rounded-3xl shadow-lg h-24 w-24 mb-5">
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-tr from-sky-500 to-indigo-500 blur-md opacity-70" />
-          <Notebook size={64} weight="fill" className="relative text-sky-100" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-black relative font-poppins px-4">
+      <div className="w-full max-w-md p-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/20 mb-4 rotate-3">
+            <Notebook size={32} weight="fill" className="text-white" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-white tracking-wide">
+            JUDGING SYSTEM
+          </h1>
+
+          <p className="text-xs text-slate-400 uppercase tracking-[0.2em] mt-1">
+            Redefining Audit Excellence
+          </p>
         </div>
-      </div>
-      <div className="max-w-md w-full bg-white rounded-4xl shadow-md p-8">
-        <h2 className="text-2xl font-semibold text-center text-gray-700 mb-2">
-          Welcome! 👋
-        </h2>
-        <p className="text-gray-500 text-center text-sm mb-6">
-          Silahkan masuk untuk melakukan penilaian
-        </p>
 
         {errorMsg && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
+          <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-200 text-sm text-center rounded-xl">
             {errorMsg}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-600">
-              Email
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
+              Username (ID)
             </label>
-            <div className="relative mt-4">
-              {/* Icon Amplop di Kiri */}
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Envelope size={20} className="text-gray-400" />
+
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <User className="text-slate-500" size={20} />
               </div>
 
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="email@example.com"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 text-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Contoh: ABC"
+                className="w-full bg-slate-950/50 border border-slate-700 text-white pl-11 pr-4 py-3.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder-slate-600"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">
               Password
             </label>
-            <div className="relative mt-4">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <LockKey size={20} className="text-gray-400" />
+
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <LockKey className="text-slate-500" size={20} />
               </div>
+
               <input
                 type={showPassword ? "text" : "password"}
                 required
-                placeholder="********"
-                className="mt-1 block pl-10 w-full px-3 py-2 border border-gray-300 text-gray-700 rounded-xl shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="••••••••"
+                className="w-full bg-slate-950/50 border border-slate-700 text-white pl-11 pr-4 py-3.5 rounded-xl focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder-slate-600"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -131,9 +143,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-4 px-4 border border-transparent rounded-full shadow-sm text-md font-medium text-white bg-linear-to-br from-sky-500 to-indigo-500 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
+            className="w-full py-4 mt-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-cyan-900/20 disabled:opacity-50 transform active:scale-[0.98]"
           >
-            {loading ? "Loading..." : "Login"}
+            {loading ? "Memproses..." : "Masuk Sistem"}
           </button>
         </form>
       </div>

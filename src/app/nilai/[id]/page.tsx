@@ -2,86 +2,63 @@
 import { useEffect, useState, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { PaperPlaneTilt } from "@phosphor-icons/react";
+import { PaperPlaneTilt, CaretLeft, PresentationChart, User } from "@phosphor-icons/react";
+import Swal from "sweetalert2";
 
-export default function ScoringPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function ScoringPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const participantId = resolvedParams.id;
-
   const router = useRouter();
+  
   const [participant, setParticipant] = useState<any>(null);
-  const [loading, setLoading] = useState(true); // Default loading true agar tidak glitch
+  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
-  // State Nilai
+  // UPDATE STATE: Sesuaikan dengan kolom database baru
   const [scores, setScores] = useState({
-    originality: 70,
-    applicable: 70,
-    result: 70,
-    strategic: 70,
-    presentation: 70,
+    originality: 70,    // Originalitas
+    applicable: 70,     // Applicable
+    benefit: 70,        // Manfaat (Dulu Result)
+    collaborative: 70,  // Kolaboratif (Dulu Strategic)
+    presentation: 70,   // Presentasi
   });
 
-  // Hitung total realtime
   const totalScore =
     scores.originality +
     scores.applicable +
-    scores.result +
-    scores.strategic +
+    scores.benefit +
+    scores.collaborative +
     scores.presentation;
 
   useEffect(() => {
     const initData = async () => {
       if (!participantId) return;
 
-      // Session Check
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        router.push("/login");
-        return;
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.push("/login"); return; }
       setUser(session.user);
 
       try {
-        // Get Participant Data
-        const participantReq = supabase
-          .from("participants")
-          .select("*")
-          .eq("id", participantId)
-          .single();
+        const { data: participantData } = await supabase
+          .from("participants").select("*").eq("id", participantId).single();
 
-        // Check is that judge was scored the participants?
-        const scoreReq = supabase
+        const { data: scoreData } = await supabase
           .from("scores")
           .select("*")
           .eq("participant_id", participantId)
           .eq("judge_id", session.user.id)
           .single();
 
-        const [participantRes, scoreRes] = await Promise.all([
-          participantReq,
-          scoreReq,
-        ]);
+        if (participantData) setParticipant(participantData);
 
-        if (participantRes.data) {
-          setParticipant(participantRes.data);
-        }
-
-        // If scored, old data
-        if (scoreRes.data) {
+        // UPDATE LOAD DATA: Mapping kolom database ke state
+        if (scoreData) {
           setScores({
-            originality: scoreRes.data.originality,
-            applicable: scoreRes.data.applicable,
-            result: scoreRes.data.result,
-            strategic: scoreRes.data.strategic,
-            presentation: scoreRes.data.presentation,
+            originality: scoreData.originality,
+            applicable: scoreData.applicable,
+            benefit: scoreData.benefit,             // Baru
+            collaborative: scoreData.collaborative, // Baru
+            presentation: scoreData.presentation,
           });
         }
       } catch (error) {
@@ -90,36 +67,79 @@ export default function ScoringPage({
         setLoading(false);
       }
     };
-
     initData();
   }, [participantId, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!confirm("Yakin dengan nilai ini? Data akan disimpan")) return;
+
+    // 1. Ganti Confirm Standar dengan SweetAlert Custom
+    const result = await Swal.fire({
+      title: 'Konfirmasi Penilaian',
+      html: `
+        <div class="text-left text-sm text-slate-300">
+          <p>Apakah Anda yakin dengan nilai total: <strong class="text-cyan-400 text-lg">${totalScore}</strong>?</p>
+          <p class="mt-2 text-xs italic">Data yang disimpan tidak dapat diubah lagi.</p>
+        </div>
+      `,
+      icon: 'question',
+      iconColor: '#22d3ee', // Cyan Neon
+      background: '#0f172a', // Slate-950 (Dark Theme)
+      color: '#fff',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Simpan Nilai',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#0891b2', // Cyan-600
+      cancelButtonColor: '#475569', // Slate-600
+      customClass: {
+        popup: 'border border-white/10 rounded-2xl shadow-2xl shadow-cyan-500/10'
+      }
+    });
+
+    // Jika user klik Batal, berhenti di sini
+    if (!result.isConfirmed) return;
 
     setLoading(true);
 
-    // Use insert if new, use upsert if no
     const { error } = await supabase.from("scores").upsert(
       {
         judge_id: user.id,
         participant_id: participantId,
         originality: scores.originality,
         applicable: scores.applicable,
-        result: scores.result,
-        strategic: scores.strategic,
-        presentation: scores.presentation
+        benefit: scores.benefit,
+        collaborative: scores.collaborative,
+        presentation: scores.presentation,
+        total_score: totalScore
       },
       { onConflict: "judge_id, participant_id" }
     );
 
     if (error) {
-      alert("Gagal Menyimpan: " + error.message);
       setLoading(false);
+      // 2. Ganti Alert Error
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Menyimpan',
+        text: error.message,
+        background: '#0f172a',
+        color: '#fff'
+      });
     } else {
-      alert("Berhasil dinilai!");
-      router.push("/");
+      // 3. Ganti Alert Sukses
+      await Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: 'Penilaian telah berhasil disimpan ke sistem.',
+        background: '#0f172a',
+        color: '#fff',
+        iconColor: '#22d3ee',
+        confirmButtonColor: '#0891b2',
+        timer: 2000,
+        timerProgressBar: true
+      });
+      
+      router.push("/"); // Kembali ke Dashboard
     }
   };
 
@@ -127,156 +147,85 @@ export default function ScoringPage({
     setScores((prev) => ({ ...prev, [field]: parseInt(value) || 0 }));
   };
 
-  const getInitials = (name: string) => {
-    return (name || "")
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  };
-
-  if (loading || !participant)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Memuat data...
-      </div>
-    );
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-cyan-400 font-poppins">Loading...</div>;
+  if (!participant) return <div className="text-white text-center pt-20">Data tidak ditemukan.</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4 font-sans">
-      <div className="max-w-xl mx-auto rounded-xl overflow-hidden">
-        {/* Header Participants */}
-        <div className="bg-linear-to-br from-sky-500 to-indigo-500 p-6 rounded-t-4xl text-white shadow-lg">
-          <div className="flex gap-4 items-center">
-            <div className="shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold bg-white text-blue-600 shadow-inner">
-              {getInitials(participant.name)}
-            </div>
-            <div className="grow min-w-0">
-              {/* PERBAIKAN DI SINI: Menggunakan participant.name bukan item.name */}
-              <h2 className="text-xl font-bold text-white truncate">
-                {participant.name}
-              </h2>
-              <p className="text-sm text-blue-100 truncate">
-                {participant.title}
-              </p>
+    <div className="min-h-screen w-full font-poppins relative text-white pb-32">
+      <div className="fixed inset-0 z-0" style={{ backgroundImage: `linear-gradient(to bottom, rgba(2, 6, 23, 0.95), rgba(2, 6, 23, 0.9)), url('/bg-audit.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+
+      <div className="relative z-10 max-w-2xl mx-auto px-4 pt-8">
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-slate-400 hover:text-cyan-400 mb-6 transition-colors">
+            <CaretLeft size={20} /><span className="text-sm font-bold uppercase">Kembali</span>
+        </button>
+
+        {/* Card Info Peserta */}
+        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl mb-8 relative overflow-hidden">
+          <div className="relative z-10">
+            <span className="px-3 py-1 rounded-md bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-[10px] font-bold uppercase tracking-widest">Peserta #{participant.display_order}</span>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-white my-2 leading-tight">{participant.title}</h1>
+            <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-white/5 text-sm text-slate-300">
+                <div className="flex items-center gap-2"><User weight="fill" className="text-slate-500" /><span className="text-slate-500 text-xs font-bold uppercase w-24">Moderator</span><span className="font-medium text-cyan-100">{participant.moderator}</span></div>
+                <div className="flex items-center gap-2"><User weight="duotone" className="text-slate-500" /><span className="text-slate-500 text-xs font-bold uppercase w-24">Presenter</span><span className="font-medium text-cyan-100">{participant.presenters?.join(', ')}</span></div>
             </div>
           </div>
         </div>
 
-        {/* FORM NILAI */}
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white p-6 space-y-6 rounded-b-2xl"
-        >
-          <ScoreInput
-            label="Originalitas"
-            desc="Apakah metode pemeriksaan baru atau pengembangan dari yang sudah pernah dilakukan"
-            value={scores.originality}
-            onChange={(val: string) => handleScoreChange("originality", val)}
-          />
-          <ScoreInput
-            label="Applicable"
-            desc="Tingkat/persentase inovasi dapat dilaksanakan di wilayah lain"
-            value={scores.applicable}
-            onChange={(val: string) => handleScoreChange("applicable", val)}
-          />
-          <ScoreInput
-            label="Hasil"
-            desc="Seberapa besar tingkat keberhasilan inovasi, hasil akurat, penyelesaian masalah"
-            value={scores.result}
-            onChange={(val: string) => handleScoreChange("result", val)}
-          />
-          <ScoreInput
-            label="Aspek Strategis"
-            desc="Pemanfaatan teknologi, kolaborasi dengan divisi lain, & keberlanjutan inovasi."
-            value={scores.strategic}
-            onChange={(val: string) => handleScoreChange("strategic", val)}
-          />
-          <ScoreInput
-            label="Presentasi"
-            desc="Penyajian materi, cara penyampaian, dan ketepatan waktu"
-            value={scores.presentation}
-            onChange={(val: string) => handleScoreChange("presentation", val)}
-          />
-
-          {/* TOTAL & BUTTONS */}
-          <div className="pb-20"></div>
-
-          {/* 2. FIXED FOOTER: Bagian Total & Tombol yang menempel di bawah */}
-          <div className="fixed px-6 bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50">
-            {/* Wrapper max-w-xl agar posisi lurus dengan form di atasnya */}
-            <div className="max-w-xl mx-auto p-4 md:p-6">
-              <div className="w-full gap-6 flex justify-center items-center mb-4">
-                <div className="flex flex-col bg-gray-100 p-6 rounded-full justify-center items-center">
-                  <span className="text-gray-600 font-medium text-xs md:text-sm tracking-wider">
-                    Total
-                  </span>
-                  <span className="text-3xl font-bold text-gray-800 font-mono">
-                    {totalScore}
-                  </span>
-                </div>
-                <div className="w-full">
-                  {/* <button
-                  type="button"
-                  onClick={() => router.back()}
-                  className="flex-1 py-3 border border-gray-300 rounded-lg font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Batal
-                </button> */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex justify-center gap-4 items-center w-full p-3 bg-linear-to-br from-sky-500 to-indigo-500 text-white rounded-full font-bold hover:opacity-90 cursor-pointer transition-all shadow-blue-200 shadow-md hover:shadow-lg active:scale-95"
-                  >
-                    <PaperPlaneTilt size={20} />
-                    {loading ? "Menyimpan..." : "Simpan Nilai"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* UPDATE FORM INPUT: Label Baru */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <ScoreInput label="Originalitas" desc="Merupakan Innovasi baru atau pengembangan dari inovsi yang sudah pernah dilakukan" value={scores.originality} onChange={(val: string) => handleScoreChange("originality", val)} />
+          <ScoreInput label="Applicable" desc="Bentuk inovasi dapat dilaksanakan oleh seluruh uditor, departemen lain, bahkan oleh unit Operation dan keberlanjutan inovasi." value={scores.applicable} onChange={(val: string) => handleScoreChange("applicable", val)} />
+          
+          {/* Ganti Result -> Manfaat */}
+          <ScoreInput label="Manfaat" desc="Seberapa besar manfaat innovasi ini apabila di aplikasikan/setelah diaplikasikan." value={scores.benefit} onChange={(val: string) => handleScoreChange("benefit", val)} />
+          
+          {/* Ganti Strategic -> Kolaboratif */}
+          <ScoreInput label="Kolaboratif" desc="Pemanfaatan teknologi, kolaborasi dengan departemen dan divisi lain." value={scores.collaborative} onChange={(val: string) => handleScoreChange("collaborative", val)} />
+          
+          <ScoreInput label="Presentasi" desc="Cara penyajian materi dan cara penyampaian presenter." value={scores.presentation} onChange={(val: string) => handleScoreChange("presentation", val)} />
         </form>
+      </div>
+
+      <div className="fixed bottom-0 left-0 w-full z-50 px-4 pb-6 pt-4 bg-slate-950/80 backdrop-blur-xl border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="max-w-2xl mx-auto flex items-center justify-between gap-6">
+            <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Total Score</span>
+                <div className="flex items-baseline gap-1"><span className="text-3xl md:text-4xl font-black text-cyan-400 font-mono">{totalScore}</span><span className="text-sm text-slate-500 font-bold">/ 500</span></div>
+            </div>
+            <button onClick={handleSubmit} disabled={loading} className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3.5 px-6 rounded-xl font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-95">
+                {loading ? "Saving..." : <><span>Submit Nilai</span><PaperPlaneTilt size={20} weight="fill" /></>}
+            </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// Sub Component
+// Komponen Slider Bulat (Sama seperti sebelumnya)
 function ScoreInput({ label, desc, value, onChange }: any) {
-  // Logic warna slider
   const getColor = (val: number) => {
-    if (val < 50) return "text-red-500 bg-red-50";
-    if (val < 80) return "text-orange-500 bg-orange-50";
-    return "text-blue-600 bg-blue-50";
+    if (val < 50) return "text-red-400 border-red-500/30 bg-red-500/10";
+    if (val < 80) return "text-amber-400 border-amber-500/30 bg-amber-500/10";
+    return "text-cyan-400 border-cyan-500/30 bg-cyan-500/10";
   };
-
   return (
-    <div>
-      <div className="flex justify-between mb-1 items-center">
-        <label className="font-semibold text-gray-800 text-lg md:text-base">
-          {label}
-        </label>
-        <span
-          className={`font-mono font-bold px-3 py-1 rounded text-sm ${getColor(
-            value
-          )}`}
-        >
-          {value}
-        </span>
+    <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-5 hover:border-cyan-500/30 transition-colors">
+      <div className="flex justify-between items-center mb-2">
+        <label className="font-bold text-white text-lg tracking-wide">{label}</label>
+        <span className={`font-mono font-bold px-3 py-1 rounded-lg text-sm border ${getColor(value)}`}>{value}</span>
       </div>
-      <p className="text-xs text-gray-400 mb-3 leading-relaxed">{desc}</p>
-      <input
-        type="range"
-        min="10"
-        max="100"
-        value={value ?? 0}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-      />
-      <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-semibold uppercase">
-        <span>Min (10)</span>
-        <span>Max (100)</span>
+      <p className="text-xs text-slate-400 mb-6 leading-relaxed border-l-2 border-slate-700 pl-3">{desc}</p>
+      <div className="relative h-6 flex items-center group">
+        <div className="absolute w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+             <div className="h-full bg-gradient-to-r from-cyan-900 via-cyan-600 to-cyan-400 transition-all duration-100 ease-out" style={{ width: `${value}%` }}></div>
+        </div>
+        <input type="range" min="0" max="100" value={value} onChange={(e) => onChange(e.target.value)}
+            className="absolute w-full h-full opacity-0 cursor-pointer z-10 
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6"
+            /* NOTE: Gunakan CSS Thumb yang saya kasih sebelumnya di sini agar buletannya muncul */
+        />
+        {/* Indikator Visual Thumb (Optional jika CSS thumb browser tidak muncul) */}
+        <div className="absolute h-6 w-6 bg-white border-4 border-cyan-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.8)] pointer-events-none transition-all" style={{ left: `calc(${value}% - 12px)` }}></div>
       </div>
     </div>
   );

@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google"; // Import Poppins
+import { Poppins } from "next/font/google"; 
 import "./globals.css";
 
-// 2. Konfigurasi Font Poppins
+// Setup Font Poppins
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"], // Lengkap dari tipis ke tebal
   variable: "--font-poppins",
 });
 
 export const metadata: Metadata = {
   title: "Paper Judging",
-  description: "Aplikasi Penjurian Makalah Online",
+  description: "Exclusive Event",
 };
 
 export default function RootLayout({
@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${poppins.className} antialiased text-gray-800`}>
+      <body className={`${poppins.className} antialiased bg-slate-950 text-gray-200`}>
         {children}
       </body>
     </html>
