@@ -2,7 +2,7 @@
 import { useEffect, useState, use } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { PaperPlaneTilt, CaretLeft, PresentationChart, User } from "@phosphor-icons/react";
+import { PaperPlaneTilt, CaretLeft, User } from "@phosphor-icons/react";
 import Swal from "sweetalert2";
 
 export default function ScoringPage({ params }: { params: Promise<{ id: string }> }) {
@@ -192,7 +192,7 @@ export default function ScoringPage({ params }: { params: Promise<{ id: string }
                 <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Total Score</span>
                 <div className="flex items-baseline gap-1"><span className="text-3xl md:text-4xl font-black text-cyan-400 font-mono">{totalScore}</span><span className="text-sm text-slate-500 font-bold">/ 500</span></div>
             </div>
-            <button onClick={handleSubmit} disabled={loading} className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3.5 px-6 rounded-xl font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-95">
+            <button onClick={handleSubmit} disabled={loading} className="flex-1 bg-linear-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white py-3.5 px-6 rounded-xl font-bold uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all transform active:scale-95">
                 {loading ? "Saving..." : <><span>Submit Nilai</span><PaperPlaneTilt size={20} weight="fill" /></>}
             </button>
         </div>
@@ -203,6 +203,11 @@ export default function ScoringPage({ params }: { params: Promise<{ id: string }
 
 // Komponen Slider Bulat (Sama seperti sebelumnya)
 function ScoreInput({ label, desc, value, onChange }: any) {
+
+  const min = 10;
+  const max = 100;
+  const percent = ((value - min) / (max - min)) * 100
+
   const getColor = (val: number) => {
     if (val < 50) return "text-red-400 border-red-500/30 bg-red-500/10";
     if (val < 80) return "text-amber-400 border-amber-500/30 bg-amber-500/10";
@@ -214,18 +219,43 @@ function ScoreInput({ label, desc, value, onChange }: any) {
         <label className="font-bold text-white text-lg tracking-wide">{label}</label>
         <span className={`font-mono font-bold px-3 py-1 rounded-lg text-sm border ${getColor(value)}`}>{value}</span>
       </div>
+
       <p className="text-xs text-slate-400 mb-6 leading-relaxed border-l-2 border-slate-700 pl-3">{desc}</p>
+
       <div className="relative h-6 flex items-center group">
         <div className="absolute w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-             <div className="h-full bg-gradient-to-r from-cyan-900 via-cyan-600 to-cyan-400 transition-all duration-100 ease-out" style={{ width: `${value}%` }}></div>
+             <div className="h-full bg-linear-to-r from-cyan-900 via-cyan-600 to-cyan-400 transition-all duration-100 ease-out" style={{ width: `${percent}%` }}></div>
         </div>
-        <input type="range" min="0" max="100" value={value} onChange={(e) => onChange(e.target.value)}
-            className="absolute w-full h-full opacity-0 cursor-pointer z-10 
-            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6"
-            /* NOTE: Gunakan CSS Thumb yang saya kasih sebelumnya di sini agar buletannya muncul */
+        <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(e.target.value)}
+            className="absolute w-full h-full opacity-100 cursor-pointer z-10 
+            /* Style Thumb (Tombol Bulat) Chrome/Safari */
+              [&::-webkit-slider-thumb]:appearance-none
+              [&::-webkit-slider-thumb]:h-6
+              [&::-webkit-slider-thumb]:w-6
+              [&::-webkit-slider-thumb]:rounded-full
+              [&::-webkit-slider-thumb]:bg-white
+              [&::-webkit-slider-thumb]:border-4
+              [&::-webkit-slider-thumb]:border-cyan-500
+              [&::-webkit-slider-thumb]:shadow-[0_0_15px_rgba(6,182,212,0.8)]
+              [&::-webkit-slider-thumb]:transition-transform
+              [&::-webkit-slider-thumb]:duration-150
+              hover:[&::-webkit-slider-thumb]:scale-110
+              active:[&::-webkit-slider-thumb]:scale-125
+
+              /* Style Thumb Firefox */
+              [&::-moz-range-thumb]:h-6
+              [&::-moz-range-thumb]:w-6
+              [&::-moz-range-thumb]:rounded-full
+              [&::-moz-range-thumb]:bg-white
+              [&::-moz-range-thumb]:border-4
+              [&::-moz-range-thumb]:border-cyan-500
+              [&::-moz-range-thumb]:shadow-[0_0_15px_rgba(6,182,212,0.8)]
+              [&::-moz-range-thumb]:border-none"
         />
-        {/* Indikator Visual Thumb (Optional jika CSS thumb browser tidak muncul) */}
-        <div className="absolute h-6 w-6 bg-white border-4 border-cyan-500 rounded-full shadow-[0_0_15px_rgba(6,182,212,0.8)] pointer-events-none transition-all" style={{ left: `calc(${value}% - 12px)` }}></div>
+      </div>
+      <div className="flex justify-between text-[10px] text-slate-500 mt-3 font-bold uppercase tracking-widest">
+        <span>Min ({min})</span>
+        <span>Max ({max})</span>
       </div>
     </div>
   );
