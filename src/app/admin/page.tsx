@@ -34,7 +34,6 @@ export default function AdminPage() {
       setProfile(profileData);
 
       // 3. Ambil Data Peserta & Skor
-      // PERBAIKAN: Hapus 'name', ganti dengan 'moderator, presenters'
       const { data: participants, error } = await supabase.from("participants")
         .select(`
             id, title, moderator, presenters, display_order,
@@ -51,15 +50,19 @@ export default function AdminPage() {
             grandTotal += (s.originality || 0) + (s.applicable || 0) + (s.benefit || 0) + (s.collaborative || 0) + (s.presentation || 0);
           });
 
+          const judgeCount = currentScores.length;
+          const averageScore = judgeCount > 0 ? (grandTotal/judgeCount) : 0;
+
           return {
             ...p,
             totalScore: grandTotal,
             judgeCount: currentScores.length,
+            averageScore: averageScore
           };
         });
 
         // Sort Highest Score
-        const sorted = computed.sort((a: any, b: any) => b.totalScore - a.totalScore);
+        const sorted = computed.sort((a: any, b: any) => b.averageScore - a.averageScore);
         setLeaderboard(sorted);
       }
       setLoading(false);
@@ -143,7 +146,7 @@ export default function AdminPage() {
             
             <button 
                 onClick={() => router.push('/admin/podium')}
-                className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-105 transition-all duration-300 font-bold text-sm uppercase tracking-wider"
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-600 cursor-pointer text-white px-6 py-3 rounded-xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-105 transition-all duration-300 font-bold text-sm uppercase tracking-wider"
             >
                 <Trophy size={20} weight="fill" />
                 Lihat Podium
@@ -160,6 +163,7 @@ export default function AdminPage() {
                   <th className="p-5">Judul Makalah & Tim</th>
                   <th className="p-5 text-center">Juri Masuk</th>
                   <th className="p-5 text-right">Total Skor</th>
+                  <th className="p-5 text-right">Rata-rata</th>
                   <th className="p-5 text-center">Aksi</th>
                 </tr>
               </thead>
@@ -201,10 +205,15 @@ export default function AdminPage() {
                                     {team.totalScore}
                                 </span>
                             </td>
+                            <td className="p-5 text-right">
+                                <span className="font-mono font-bold text-2xl text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.3)]">
+                                    {team.averageScore.toFixed(2)}
+                                </span>
+                            </td>
                             <td className="p-5 text-center">
                                 <button 
                                     onClick={() => router.push(`/admin/detail/${team.id}`)}
-                                    className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:bg-cyan-600 hover:text-white transition-all border border-slate-700 hover:border-cyan-500"
+                                    className="p-2 rounded-lg bg-slate-800 cursor-pointer text-slate-400 hover:bg-cyan-600 hover:text-white transition-all border border-slate-700 hover:border-cyan-500"
                                     title="Lihat Detail"
                                 >
                                     <PresentationChart size={20} />

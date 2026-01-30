@@ -34,11 +34,14 @@ export default function PodiumPage() {
                 (s.presentation || 0);
           });
 
-          return { ...p, totalScore: grandTotal };
+          const judgeCount = currentScores.length;
+          const averageScore = judgeCount > 0 ? (grandTotal/judgeCount) : 0;
+
+          return { ...p, totalScore: grandTotal, averageScore: averageScore };
         });
 
         // 3. Urutkan & Ambil Top 3
-        const sorted = computed.sort((a: any, b: any) => b.totalScore - a.totalScore);
+        const sorted = computed.sort((a: any, b: any) => b.averageScore - a.averageScore);
         setWinners(sorted.slice(0, 3));
       }
       setLoading(false);
@@ -122,7 +125,7 @@ export default function PodiumPage() {
                             {runnerUp.title}
                         </h3>
                         <div className="mt-1 md:mt-2 bg-slate-800/80 px-3 md:px-5 py-0.5 md:py-1 rounded-full border border-slate-600 inline-block font-mono text-sm md:text-base font-bold text-slate-300">
-                            {runnerUp.totalScore}
+                            {runnerUp.averageScore.toFixed(2)}
                         </div>
                      </div>
                      
@@ -168,7 +171,7 @@ export default function PodiumPage() {
                         </h3>
 
                         <div className="mt-1 md:mt-2 bg-gradient-to-r from-yellow-900/50 to-amber-900/50 px-4 md:px-8 py-1 rounded-full border border-yellow-500 inline-block font-mono text-xl md:text-2xl font-black text-yellow-400 shadow-[0_0_30px_rgba(234,179,8,0.4)]">
-                            {champion.totalScore}
+                            {champion.averageScore.toFixed(2)}
                         </div>
                      </div>
                      
@@ -214,7 +217,7 @@ export default function PodiumPage() {
                         </h3>
                         
                         <div className="mt-1 md:mt-2 bg-orange-900/40 px-3 md:px-5 py-0.5 md:py-1 rounded-full border border-orange-600 inline-block font-mono text-sm md:text-base font-bold text-orange-400">
-                            {thirdPlace.totalScore}
+                            {thirdPlace.averageScore.toFixed(2)}
                         </div>
                      </div>
                      
